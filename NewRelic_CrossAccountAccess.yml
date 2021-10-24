@@ -1,0 +1,29 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: >
+  New Relic Cross Account Role Setup
+Parameters:
+  ExternalId: 
+    Type: String
+    Default: 3257316
+
+Resources:
+  CrossAccountRoleNewRelic:
+    Type: AWS::IAM::Role
+    Properties:
+       RoleName: CrossAccountRoleNewRelic
+       AssumeRolePolicyDocument:
+         Statement:
+         - Action: 'sts:AssumeRole'
+           Effect: Allow
+           Principal:
+             AWS: 754728514883  
+           Condition:
+             StringEquals:
+               sts:ExternalId: !Ref ExternalId
+           Sid: ''
+         Version: '2012-10-17'
+       Path: "/"
+       ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/ReadOnlyAccess
+       
