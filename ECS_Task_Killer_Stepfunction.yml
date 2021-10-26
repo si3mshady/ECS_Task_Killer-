@@ -1,0 +1,65 @@
+service: serverless-ecs-part-2
+frameworkVersion: '2'
+
+provider:
+  name: aws
+  runtime: python3.8
+  iam:    
+    role:
+      statements:
+        - Effect: 'Allow'
+          Action:
+            - ecs:*
+          Resource:           
+            - '*'  
+
+functions:
+  getArn:
+    handler: handler.get_chaos_cluster_arn
+  getTasks:
+    handler: handler.get_cluster_tasks
+  manageTasks:
+    handler: handler.manage_running_tasks
+
+stepFunctions:
+  stateMachines:
+    ecsTaskManager:
+      name: ecsTaskManager
+      definition:
+        StartAt: getClusterArn
+        States: 
+          getClusterArn:
+            Type: Task
+            Resource:
+              Fn::GetAtt: [getArn, Arn]
+            Catch:
+              - ErrorEquals: [IndexError]
+                Next: NoClusterFound
+              - ErrorEquals: [KeyError]
+                Next: NoClusterFound
+            ResultPath: "$.cluster_arn" #preserve the original input object 
+            Next: getClusterTasks
+          getClusterTasks:
+            Type: Task
+            Resource:
+              Fn::GetAtt: [getTasks, Arn]
+            ResultPath: "$.tasks" #adds a new attribute to event object. New attr is func return value 
+            Next: manageRunningTasks
+          manageRunningTasks:
+            Type: Task
+            Resource:
+              Fn::GetAtt: [manageTasks, Arn]
+            End: True
+          NoClusterFound:
+            Type: Pass
+            Result: "Cluster Not Found"
+            End: True
+
+plugins:
+  - serverless-step-functions
+  - serverless-pseudo-parameters
+
+
+#Elliott Arnold
+#Serverless Framework Stepfunctions - Convert ECS task checker into State Machine / Step Functions 
+#10-25-21
